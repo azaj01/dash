@@ -378,3 +378,7 @@ python -m evals --verbose            # Show response details
 - [OpenAI's In-House Data Agent](https://openai.com/index/inside-our-in-house-data-agent/) — the inspiration
 - [Self-Improving SQL Agent](https://www.ashpreetbedi.com/articles/sql-agent) — deep dive on an earlier architecture
 - [Agno Docs](https://docs.agno.com)
+
+## A Note on This Project
+
+This project was largely built with Claude. If you find a mistake, please open an [issue](https://github.com/agno-agi/dash/issues) or submit a pull request.
