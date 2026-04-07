@@ -79,6 +79,11 @@ sleep 15
 echo ""
 echo -e "${BOLD}Creating application service...${NC}"
 echo ""
+OPTIONAL_VARS=()
+[[ -n "$SLACK_TOKEN" ]]           && OPTIONAL_VARS+=(-v "SLACK_TOKEN=${SLACK_TOKEN}")
+[[ -n "$SLACK_SIGNING_SECRET" ]]  && OPTIONAL_VARS+=(-v "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}")
+[[ -n "$JWT_VERIFICATION_KEY" ]]  && OPTIONAL_VARS+=(-v "JWT_VERIFICATION_KEY=${JWT_VERIFICATION_KEY}")
+
 railway add -s dash \
     -v "DB_USER=${DB_USER:-ai}" \
     -v "DB_PASS=${DB_PASS:-ai}" \
@@ -88,10 +93,8 @@ railway add -s dash \
     -v "DB_DRIVER=postgresql+psycopg" \
     -v "WAIT_FOR_DB=True" \
     -v "OPENAI_API_KEY=${OPENAI_API_KEY}" \
-    -v "SLACK_TOKEN=${SLACK_TOKEN:-}" \
-    -v "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-}" \
-    -v "JWT_VERIFICATION_KEY=${JWT_VERIFICATION_KEY:-}" \
-    -v "PORT=8000"
+    -v "PORT=8000" \
+    "${OPTIONAL_VARS[@]}"
 
 echo ""
 echo -e "${BOLD}Deploying application...${NC}"

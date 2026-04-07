@@ -36,6 +36,67 @@ Confirm Dash is running at [http://localhost:8000/docs](http://localhost:8000/do
 - Show me revenue trends by plan over the last 6 months
 - Which customers are at risk of churning?
 
+## Deploy to Railway
+
+Railway deployment uses `.env.production` to keep production credentials separate from local dev.
+
+```sh
+cp example.env .env.production
+# Edit .env.production — set OPENAI_API_KEY
+```
+
+### Step 1: Deploy infrastructure
+
+This creates the Railway project, database, and app service. The app will crash-loop until the JWT key is added in the next step — that's expected.
+
+```sh
+railway login
+./scripts/railway_up.sh
+```
+
+### Step 2: Get your JWT key
+
+Production requires a `JWT_VERIFICATION_KEY` from [AgentOS](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agent-example&utm_content=dash&utm_term=agentos). You need the Railway domain from step 1 to set this up.
+
+1. Copy your Railway domain from the output of step 1 (e.g. `dash-production-xxxx.up.railway.app`)
+2. Open [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agent-example&utm_content=dash&utm_term=agentos) and login
+3. Add OS → Live → paste your Railway URL
+4. Go to **Settings** and generate a key pair
+5. Add the public key to `.env.production` (wrap in single quotes):
+
+```bash
+JWT_VERIFICATION_KEY='-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkq...
+-----END PUBLIC KEY-----'
+```
+
+### Step 3: Push environment and redeploy
+
+```sh
+./scripts/railway_env.sh
+./scripts/railway_redeploy.sh
+```
+
+`railway_env.sh` reads `.env.production` and sets each variable on the Railway service. Safe to run repeatedly. Handles multiline values (PEM keys) correctly.
+
+### Production operations
+
+Database scripts must run inside Railway's network (the internal hostname `pgvector.railway.internal` isn't reachable from your local machine). Use SSH to connect to the running container:
+
+```sh
+railway ssh --service dash
+# Inside the container:
+python scripts/generate_data.py
+python scripts/load_knowledge.py
+```
+
+Other operations run locally:
+
+```sh
+railway logs --service dash
+railway open
+```
+
 ## Why Dash Exists
 
 Ask a question in English, get a correct, meaningful answer. That's the goal. But raw LLMs writing SQL hit a wall fast: schemas lack meaning, types are misleading, tribal knowledge is missing, there's no way to learn from mistakes, and results lack interpretation.
@@ -260,50 +321,6 @@ python -m evals --category accuracy  # Run specific category
 python -m evals --verbose            # Show response details
 ```
 
-## Deploy to Railway
-
-Railway deployment uses `.env.production` to keep production credentials separate from local dev.
-
-### First-time setup
-
-```sh
-cp example.env .env.production
-# Edit .env.production — set OPENAI_API_KEY, SLACK_TOKEN, etc.
-
-railway login
-./scripts/railway_up.sh
-```
-
-### Sync environment variables
-
-After updating `.env.production`, sync to Railway:
-
-```sh
-./scripts/railway_env.sh
-```
-
-This reads `.env.production` and sets each variable on the Railway service. Safe to run repeatedly — overwrites existing values. Handles multiline values (PEM keys) correctly.
-
-### Redeploy after code changes
-
-```sh
-./scripts/railway_redeploy.sh
-```
-
-### Production operations
-
-```sh
-railway run python scripts/generate_data.py
-railway run python scripts/load_knowledge.py
-railway logs --service dash
-railway run python -m dash
-railway open
-```
-
-### Secure your deployment
-
-See [Security](#security) below for setup — you'll need to connect your OS at [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agent-example&utm_content=dash&utm_term=agentos) and add a `JWT_VERIFICATION_KEY` to your environment.
-
 ## Local Development
 
 ```sh
@@ -340,25 +357,7 @@ Local development (`RUNTIME_ENV=dev`, set by Docker Compose) runs without auth s
 
 ### Setup
 
-1. Deploy Dash to Railway (or your cloud provider)
-2. Open [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agent-example&utm_content=dash&utm_term=agentos) and connect your deployed OS
-3. Go to **Settings** and generate a key pair
-4. Add the public key to your `.env.production` (paste the full PEM block, no quotes needed):
-
-```bash
-JWT_VERIFICATION_KEY=-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkq...
------END PUBLIC KEY-----
-```
-
-5. Push to production and redeploy:
-
-```bash
-./scripts/railway_env.sh
-./scripts/railway_redeploy.sh
-```
-
-The Agno control plane handles JWT issuance, session management, traces, metrics, and the web UI. See the [AgentOS Security docs](https://docs.agno.com/agent-os/security/overview?utm_source=github&utm_medium=example-repo&utm_campaign=agent-example&utm_content=dash&utm_term=security) for details.
+See [Deploy to Railway](#deploy-to-railway) for the full setup flow, including how to get your `JWT_VERIFICATION_KEY` from AgentOS. The Agno control plane handles JWT issuance, session management, traces, metrics, and the web UI. See the [AgentOS Security docs](https://docs.agno.com/agent-os/security/overview?utm_source=github&utm_medium=example-repo&utm_campaign=agent-example&utm_content=dash&utm_term=security) for details.
 
 ### Schema-Level Enforcement
 
